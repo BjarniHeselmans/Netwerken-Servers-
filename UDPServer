@@ -1,6 +1,6 @@
 /*
 set Path=C:\MinGW\bin;%PATH%
-gcc UDP.c -o net.exe -l ws2_32
+gcc udptester.c -o net.exe -l ws2_32
 */
 
 #ifdef _WIN32
@@ -43,14 +43,17 @@ gcc UDP.c -o net.exe -l ws2_32
 
 #include <time.h> // for time
 #include <stdbool.h> // for bool, true, false
+#include <sys/time.h> // Add this include for gettimeofday
+#include <limits.h>   // Add this include for INT_MAX
 
+#define MAX_CLIENTS 100 // Define MAX_CLIENTS if it's not already defined
 #define TIMEOUT_INITIAL 16 // Initial timeout value in seconds
 #define TIMEOUT_MULTIPLIER 0.5 // Multiplier for dynamic timeout
 
 int initialization();
-void execution( int internet_socket );
+void execution( int internet_socket, int random_number);
 void cleanup( int internet_socket );
-bool check_guess(int guess);
+bool check_guess(int guess, int random_number);
 
 int main( int argc, char * argv[] )
 {
@@ -137,12 +140,23 @@ int initialization()
     return internet_socket;
 }
 
-void execution( int internet_socket )
+void execution(int internet_socket, int random_number)
 {
     int initial_timeout = TIMEOUT_INITIAL;
     bool winner_selected = false;
 
-    while (!winner_selected) {
+    struct timeval start_time, current_time;
+    gettimeofday(&start_time, NULL);
+    int timeout_sec = TIMEOUT_INITIAL;
+
+    // Variables for storing guessed numbers and client addresses
+    int guessed_nums[MAX_CLIENTS] = {0};
+    struct sockaddr_in client_addrs[MAX_CLIENTS];
+    socklen_t addr_lens[MAX_CLIENTS];
+    int num_clients = 0;
+
+    while (!winner_selected)
+    {
         // Calculate dynamic timeout based on the number of guesses
         int timeout = initial_timeout;
 
@@ -150,58 +164,96 @@ void execution( int internet_socket )
         struct timeval tv;
         tv.tv_sec = timeout;
         tv.tv_usec = 0;
-        setsockopt(internet_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+        setsockopt(internet_socket, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
 
         int number_of_bytes_received = 0;
         char buffer[1000];
         struct sockaddr_storage client_internet_address;
-        socklen_t client_internet_address_length = sizeof client_internet_address;
-        number_of_bytes_received = recvfrom( internet_socket, buffer, ( sizeof buffer ) - 1, 0, (struct sockaddr *) &client_internet_address, &client_internet_address_length );
-        if( number_of_bytes_received == -1 )
+        socklen_t client_internet_address_length = sizeof(client_internet_address);
+        number_of_bytes_received = recvfrom(internet_socket, buffer, (sizeof buffer) - 1, 0, (struct sockaddr *)&client_internet_address, &client_internet_address_length);
+        if (number_of_bytes_received == -1)
         {
             // Optionally, you can decrease the initial timeout here
             initial_timeout *= TIMEOUT_MULTIPLIER;
-            if (initial_timeout < 1) {
+            if (initial_timeout < 1)
+            {
                 initial_timeout = 1; // Minimum timeout value to avoid infinite loop
             }
-                // Late message handling for all clients
-                int number_of_bytes_send = 0;
-                number_of_bytes_send = sendto( internet_socket, "You lost!", 10, 0, (struct sockaddr *) &client_internet_address, client_internet_address_length );
-                if( number_of_bytes_send == -1 )
-                {
-                    perror( "sendto" );
-                }
+            // Late message handling for all clients
+            int number_of_bytes_send = 0;
+            number_of_bytes_send = sendto(internet_socket, "You lost!", 10, 0, (struct sockaddr *)&client_internet_address, client_internet_address_length);
+            if (number_of_bytes_send == -1)
+            {
+                perror("sendto");
+            }
         }
         else
         {
             // Handle received data
             buffer[number_of_bytes_received] = '\0';
-            printf( "Received : %s\n", buffer );
+            printf("Received : %s\n", buffer);
 
             int received_guess = atoi(buffer);
-            if (check_guess(received_guess)) {
-                // Correct guess handling
-                int number_of_bytes_send = 0;
-                number_of_bytes_send = sendto( internet_socket, "You Won?", 9, 0, (struct sockaddr *) &client_internet_address, client_internet_address_length );
-                if( number_of_bytes_send == -1 )
+            guessed_nums[num_clients] = received_guess;
+            client_addrs[num_clients] = *(struct sockaddr_in *)&client_internet_address;
+            addr_lens[num_clients] = client_internet_address_length;
+            num_clients++;
+
+            // Update timeout if necessary
+            gettimeofday(&current_time, NULL);
+            int elapsed_time_sec = current_time.tv_sec - start_time.tv_sec;
+            if (elapsed_time_sec >= timeout_sec)
+            {
+                int target_num = rand() % 100;
+                printf("Target number: %d\n", target_num);
+                int closest_guess_index = -1;
+                int closest_guess_diff = INT_MAX;
+                for (int i = 0; i < num_clients; i++)
                 {
-                    perror( "sendto" );
+                    int diff = abs(target_num - guessed_nums[i]);
+                    if (diff < closest_guess_diff)
+                    {
+                        closest_guess_index = i;
+                        closest_guess_diff = diff;
+                    }
                 }
-                winner_selected = true;
-            } else {
-                // Incorrect guess handling
-                int number_of_bytes_send = 0;
-                number_of_bytes_send = sendto( internet_socket, "You lost?", 10, 0, (struct sockaddr *) &client_internet_address, client_internet_address_length );
-                if( number_of_bytes_send == -1 )
+                if (closest_guess_index != -1)
                 {
-                    perror( "sendto" );
+                    printf("Closest guess: %d\n", guessed_nums[closest_guess_index]);
+                    printf("Closest client address: %s\n", inet_ntoa(client_addrs[closest_guess_index].sin_addr));
+                    // Handle winner here
+                    printf("Winner: %d\n", guessed_nums[closest_guess_index]);
+                    printf("Winner's address: %s\n", inet_ntoa(client_addrs[closest_guess_index].sin_addr));
+
+                    char winner_message[100];
+                    sprintf(winner_message, "Congratulations! You've won. The target number was: %d", target_num);
+
+                    int number_of_bytes_send = sendto(internet_socket, winner_message, strlen(winner_message), 0, (struct sockaddr *)&client_addrs[closest_guess_index], addr_lens[closest_guess_index]);
+                    if (number_of_bytes_send == -1)
+                    {
+                        perror("sendto");
+                    }
+                    else
+                    {
+                        printf("Sent to the winner: %s\n", winner_message);
+                    }
+
+                    // Reset the variables for the next round
+                    num_clients = 0;
+                    gettimeofday(&start_time, NULL);
+                    timeout_sec = TIMEOUT_INITIAL;
                 }
+                // Reset the variables for the next round
+                num_clients = 0;
+                gettimeofday(&start_time, NULL);
+                timeout_sec = TIMEOUT_INITIAL;
             }
         }
     }
 }
 
-bool check_guess(int guess) {
+
+bool check_guess(int guess, int random_number) {
     // Compare the guess with the randomly generated number
     return guess == random_number;
 }
