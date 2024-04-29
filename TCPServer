@@ -6,6 +6,7 @@ gcc TCP.c -o net2.exe -l ws2_32
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #ifdef _WIN32
 	#define _WIN32_WINNT _WIN32_WINNT_WIN7
@@ -59,6 +60,9 @@ int main(int argc, char *argv[])
     int internet_socket = initialization();
 
     int client_internet_socket = connection(internet_socket);
+
+    // Generate a random number between 1 and 1000000
+    //int number_to_guess = generateRandomNumber(1, 1000000);
 
     execution(client_internet_socket);
 
@@ -163,7 +167,6 @@ void execution(int client_internet_socket)
 
     do
     {
-        printf("Loop\n");
         // Send the number to guess
         guess_network_byte_order = htonl(number_to_guess);
         if (send(client_internet_socket, (const char *)&guess_network_byte_order, sizeof(guess_network_byte_order), 0) == -1)
@@ -171,7 +174,7 @@ void execution(int client_internet_socket)
             perror("send");
             break;
         }
-printf("Sended\n");
+
         // Receive the guess
         int nrOfBytes = recv(client_internet_socket, (char *)&guess_network_byte_order, sizeof(guess_network_byte_order), 0);
         if ( nrOfBytes == -1)
@@ -181,27 +184,34 @@ printf("Sended\n");
         }
         else if( nrOfBytes == 0 )
         {
-            printf("Disco\n");
             break;
         }
         guess = ntohl(guess_network_byte_order);
-printf("Recved\n");
+
+        printf("%d vs %d ? \n", guess, number_to_guess);
         // Process the guess
         if (guess < number_to_guess)
         {
-            printf("Lower\n");
+            printf("Higher\n");
         }
         else if (guess > number_to_guess)
         {
-            printf("Higher\n");
+            printf("Lower\n");
         }
         else
         {
             printf("Correct! You guessed the number.\n");
             break;
         }
+
     } while (1);
 }
+
+// Function to generate a random number between min and max (inclusive)
+//int generateRandomNumber(int min, int max) {
+    //srand(time(NULL)); // Seed the random number generator with current time
+    //return min + rand() % (max - min + 1);
+//}
 
 void cleanup(int internet_socket, int client_internet_socket)
 {
