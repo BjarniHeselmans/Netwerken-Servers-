@@ -53,22 +53,22 @@ Waar
 
 ### CONTINOUS correct : UDP-server en UDP-client moeten niet herstarten om een volgende ronde te kunnen spelen en er wordt een nieuw random nummer gekozen.
 
-Waar
 Niet waar
+
 
 ## Vraag 9:
 
 ### CLEAN CODE : (Eens alles juist werkt) UDP-server en UDP-client code zijn volgens industriestandaard geschreven in handelbare functies en geen globale variabelen.
 
-Waar
 Niet waar
+
 
 ## Vraag 10:
 
 ### EXTRA : (Eens alles juist werkt) bijvoorbeeld : high-score met IP en poort, logging to files met IP en poort, gaming AI-client, ...
 
-Waar
 Niet waar
+
 
 # TCP-Server:
 
@@ -105,38 +105,39 @@ Waar
 ### CONTINOUS correct : TCP-server en TCP-client moeten niet herstarten om een volgende ronde te kunnen spelen en er wordt een nieuw random nummer gekozen.
 
 Waar
-Niet waar
+
 
 ## Vraag 6:
 
 ### MULTIPLE CLIENTS correct : TCP-server kan meerdere simultane TCP-clients tegelijk bedienen met elk hun getal.
 
-Waar
 Niet waar
+
 
 ## Vraag 7:
 
 ### MULTIPLE CLIENTS clean & correct : er is geen nutteloze overhead bij meerdere clients, er wordt gewerkt met Synchronous I/O Multiplexing, i.e. poll() of select()
 
-Waar
 Niet waar
+
 
 ## Vraag 8:
 
 ### CLEAN CODE : (Eens alles juist werkt) TCP-server en TCP-client code zijn volgens industriestandaard geschreven in handelbare functies en geen globale variabelen.
 
-Waar
 Niet waar
+
 
 ## Vraag 9:
 
 ### EXTRA : (Eens alles juist werkt) bijvoorbeeld : high-score met IP en poort, logging to files met IP en poort, gaming AI-client, ...
 
-Waar
 Niet waar
+
 
 
 ## Vraag 10:
 ### PROFESSIONAL : Code staat op GitHub, i.e. enkel juiste bestanden, meerdere nuttige commits en uitleg
 
 Waar
+
