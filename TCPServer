@@ -50,8 +50,9 @@ void OSInit(void);
 void OSCleanup(void);
 int initialization(void);
 int connection(int internet_socket);
-void execution(int client_internet_socket);
+void execution(int client_internet_socket, int number_to_guess);
 void cleanup(int internet_socket, int client_internet_socket);
+int generateRandomNumber(int min, int max);
 
 int main(int argc, char *argv[])
 {
@@ -62,9 +63,9 @@ int main(int argc, char *argv[])
     int client_internet_socket = connection(internet_socket);
 
     // Generate a random number between 1 and 1000000
-    //int number_to_guess = generateRandomNumber(1, 1000000);
+    int number_to_guess = generateRandomNumber(1, 1000000);
 
-    execution(client_internet_socket);
+    execution(client_internet_socket, number_to_guess);
 
     cleanup(internet_socket, client_internet_socket);
 
@@ -159,9 +160,8 @@ int connection(int internet_socket)
     return client_socket;
 }
 
-void execution(int client_internet_socket)
+void execution(int client_internet_socket, int number_to_guess)
 {
-    int number_to_guess = 50; // Initialize the number to guess
     int guess;
     int guess_network_byte_order;
 
@@ -187,31 +187,46 @@ void execution(int client_internet_socket)
             break;
         }
         guess = ntohl(guess_network_byte_order);
-
-        printf("%d vs %d ? \n", guess, number_to_guess);
+        printf(" %d vs %d \n", guess, number_to_guess);
+        
         // Process the guess
         if (guess < number_to_guess)
         {
-            printf("Higher\n");
+            const char* message = "Higher";
+            if (send(client_internet_socket, message, strlen(message), 0) == -1)
+            {
+                perror("send");
+                break;
+            }
         }
         else if (guess > number_to_guess)
         {
-            printf("Lower\n");
+            const char* message = "Lower";
+            if (send(client_internet_socket, message, strlen(message), 0) == -1)
+            {
+                perror("send");
+                break;
+            }
         }
         else
         {
-            printf("Correct! You guessed the number.\n");
-            break;
+            const char* message = "Correct! You guessed the number.";
+            if (send(client_internet_socket, message, strlen(message), 0) == -1)
+            {
+                perror("send");
+                break;
+            }
+            break; // Exit the loop when correct guess is made
         }
 
     } while (1);
 }
 
 // Function to generate a random number between min and max (inclusive)
-//int generateRandomNumber(int min, int max) {
-    //srand(time(NULL)); // Seed the random number generator with current time
-    //return min + rand() % (max - min + 1);
-//}
+int generateRandomNumber(int min, int max) {
+    srand(time(NULL)); // Seed the random number generator with current time
+    return min + rand() % (max - min + 1);
+}
 
 void cleanup(int internet_socket, int client_internet_socket)
 {
