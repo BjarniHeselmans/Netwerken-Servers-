@@ -60,14 +60,16 @@ int main(int argc, char *argv[])
 
     int internet_socket = initialization();
 
-    int client_internet_socket = connection(internet_socket);
+    while (1) {
+        int client_internet_socket = connection(internet_socket);
 
-    // Generate a random number between 1 and 1000000
-    int number_to_guess = generateRandomNumber(1, 1000000);
+        // Generate a random number between 1 and 1000000
+        int number_to_guess = generateRandomNumber(1, 1000000);
 
-    execution(client_internet_socket, number_to_guess);
+        execution(client_internet_socket, number_to_guess);
 
-    cleanup(internet_socket, client_internet_socket);
+        cleanup(internet_socket, client_internet_socket);
+    }
 
     OSCleanup();
 
@@ -216,7 +218,10 @@ void execution(int client_internet_socket, int number_to_guess)
                 perror("send");
                 break;
             }
-            break; // Exit the loop when correct guess is made
+            
+            // Generate a new random number for the next game
+            number_to_guess = generateRandomNumber(1, 1000000);
+            printf("New number to guess: %d\n", number_to_guess);
         }
 
     } while (1);
